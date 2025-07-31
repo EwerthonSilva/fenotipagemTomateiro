@@ -89,4 +89,7 @@ mae = mean_absolute_error(y_test, y_pred)**0.5
 
 print(r2)
 
+print(rmse)
+print(mae)
+
 
