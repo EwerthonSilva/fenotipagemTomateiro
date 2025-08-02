@@ -1,6 +1,7 @@
 from typing import Any
 
 import numpy as np
+import pandas as pd
 from sklearn.feature_selection import RFE, SelectKBest, f_regression
 from sklearn.model_selection import cross_val_score
 
@@ -44,6 +45,8 @@ def bestNFeatures(modelo: object, X_train_sc: object, y_train: object) -> tuple[
             selector.set_params(k=n_features)
             X_sel = selector.transform(X_train_sc)
             selected_features = X_train_sc.columns[selector.get_support()]
+            X_sel = pd.DataFrame(X_sel, columns=selected_features)
+
 
             score = cross_val_score(modelo, X_sel, y_train, cv=10, scoring='r2')
 
