@@ -1,15 +1,15 @@
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import train_test_split
-
-from sklearn.model_selection import cross_val_score
-from sklearn.linear_model import LinearRegression
-
+from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVR, SVR
+from sklearn.tree import DecisionTreeRegressor
 
-from sklearn.feature_selection import RFE
+from utils import *
 
 #%% Separação dos dados Teste e treinamento
 df = pd.read_csv('data/dataset_problema2.csv')
@@ -33,63 +33,45 @@ X_test_sc.columns = X_test.columns
 
 #%% seleção de features
 best_n_features = 0
-best_score = 0
 best_X_sel = None
-max_n_features = len(X_train_sc.columns)+1
+best_sel_features = None
 
-for n_features in range(1, max_n_features):
+modelos = [
+    ('LinearSVR', LinearSVR(random_state=0)),
+    ('GaussianProcessRegressor', GaussianProcessRegressor()),
+    ('KNeighborsRegressor', KNeighborsRegressor()),
+    ('SVR', SVR()),
+    ('RandomForestRegressor', RandomForestRegressor(random_state=0)),
+    ('DecisionTreeRegressor', DecisionTreeRegressor(random_state=0)),
+    ('LinearRegression', LinearRegression()),
+    ('GradientBoostingRegressor', GradientBoostingRegressor(random_state=0))
+]
+scores = []
+#%%
+for name, model in modelos:
+    print(f"Evaluating {name}...")
+    best_n_features, best_X_sel, best_sel_features = bestNFeatures(model, X_train_sc, y_train)
+    score = cross_val_score(model, best_X_sel, y_train, cv=10, scoring='r2').mean()
+    scores.append((name, model, score, best_X_sel, best_sel_features))
 
-    modelo_linear = LinearRegression()
+print("Fim das avaliações")
 
-    selector = RFE(modelo_linear, n_features_to_select=n_features, step=1)
+#%%
+scores.sort(key=lambda x: x[2], reverse=True)
 
-    selector = selector.fit(X_train_sc, y_train)
-
-    mask = selector.support_
-
-    features = X_train_sc.columns
-
-    selected_features = features[mask]
-
-    X_sel = X_train_sc[selected_features]
-
-    score = cross_val_score(modelo_linear, X_sel, y_train, cv=10, scoring='r2')
-
-    print(np.mean(score))
-    print(n_features)
-    if(np.mean(score) > best_score):
-        best_score = np.mean(score)
-        best_n_features = n_features
-        best_X_sel = X_sel
-
-print(best_n_features)
-print(best_score)
-print(best_X_sel)
-
-#%% validação cruzada
-model_linear = LinearRegression()
-
-score = cross_val_score(model_linear, best_X_sel, y_train, cv=10, scoring='r2')
-
-print(score)
-print(np.mean(score))
-
+for name, _, score, _, sel_features in scores:
+    print(f"{name}: R² = {score:.4f}, Selected features: {list(sel_features)}")
 #%% modelo Final
-model_linear = LinearRegression()
-model_linear.fit(best_X_sel, y_train)
+for name, model, score, best_X_sel, best_sel_features in scores:
+    if(score > 0.80):
+        modelo_final = model
+        modelo_final.fit(best_X_sel, y_train)
 
-#%% Validação do modelo
-y_pred = model_linear.predict(X_test_sc[best_X_sel])
-
-r2 = model_linear.score(X_test_sc[best_X_sel], y_test)
-
-rmse = (mean_squared_error(y_test, y_pred))**0.5
-
-mae = mean_absolute_error(y_test, y_pred)**0.5
-
-print(r2)
-
-print(rmse)
-print(mae)
-
-
+        y_pred = modelo_final.predict(X_test_sc[best_sel_features])
+        r2 = modelo_final.score(X_test_sc[best_sel_features], y_test)
+        rmse = (mean_squared_error(y_test, y_pred) ** 0.5)
+        mae = mean_absolute_error(y_test, y_pred)
+        print(f"Avaliando performace {name}...")
+        print('r2', r2)
+        print('rmse', rmse)
+        print('mae', mae)
