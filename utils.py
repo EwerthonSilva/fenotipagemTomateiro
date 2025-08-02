@@ -7,17 +7,13 @@ from sklearn.model_selection import cross_val_score
 
 
 def bestNFeatures(modelo: object, X_train_sc: object, y_train: object) -> tuple[int, Any | None, Any | None]:
-    """
-
-    :rtype: tuple[int, Any | None, Any | None]
-    """
     best_n_features = 0
     best_score = 0
     best_X_sel = None
     best_sel_features = None
     max_n_features = len(X_train_sc.columns) + 1
 
-    # Check if model has coef_ or feature_importances_ for RFE
+    # verifica se o modelo possui coef_ ou feature_importances_ para o RFE
     if hasattr(modelo, 'coef_') or hasattr(modelo, 'feature_importances_'):
         for n_features in range(1, max_n_features):
             selector = RFE(modelo, n_features_to_select=n_features, step=1)
@@ -36,7 +32,7 @@ def bestNFeatures(modelo: object, X_train_sc: object, y_train: object) -> tuple[
                 best_X_sel = X_sel
                 best_sel_features = selected_features
     else:
-        # If the model does not have coef_ or feature_importances_, use SelectKBest
+        # usa SelectKBest
         selector = SelectKBest(f_regression, k='all')
         selector.fit(X_train_sc, y_train)
 
