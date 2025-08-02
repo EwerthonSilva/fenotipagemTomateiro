@@ -1,8 +1,8 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, VotingRegressor
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
@@ -63,6 +63,7 @@ for name, _, score, _, sel_features in scores:
     print(f"{name}: R² = {score:.4f}, Selected features: {list(sel_features)}")
 #%% modelo Final
 scores_finais = []
+voting_estimators = []
 for name, model, score, best_X_sel, best_sel_features in scores:
     if(score > 0.80):
         modelo_final = model
@@ -73,11 +74,24 @@ for name, model, score, best_X_sel, best_sel_features in scores:
         rmse = (mean_squared_error(y_test, y_pred) ** 0.5)
         mae = mean_absolute_error(y_test, y_pred)
         scores_finais.append((name, score, r2, rmse, mae))
+        voting_estimators.append((name, model))
         print(f"Avaliando performace {name}...")
         print('r2', r2)
         print('rmse', rmse)
         print('mae', mae)
 #%%
+model_voting = VotingRegressor(estimators=voting_estimators)
+model_voting.fit(X_train_sc, y_train)
+
+y_pred = model_voting.predict(X_test_sc)
+
+r2_voting = r2_score(y_test, y_pred)
+rmse = (mean_squared_error(y_test, y_pred) ** 0.5)
+mae = mean_absolute_error(y_test, y_pred)
+
+scores_finais.append(('VotingRegressor', 0 ,r2_voting, rmse, mae))
+
+#%%
 df_results = pd.DataFrame(scores_finais, columns=["Model", "Train_R2", "Test_R2", "RMSE", "MAE"])
-df_results.sort_values(by="Test_R2", ascending=False)
+df_results = df_results.sort_values("Test_R2", ascending=False)
 print(df_results)
